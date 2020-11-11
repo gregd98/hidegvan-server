@@ -105,11 +105,6 @@ ewelinkApi.getCredentials().then((result) => {
   if (result.error) {
     console.log(result.msg);
   } else {
-    ewelinkApi.getDevice('10005e6c69').then((resulttt) => {
-      console.log(resulttt);
-    }).catch((error) => {
-      console.log(error.message);
-    });
     initializeDevices();
     initializeSocket();
   }
