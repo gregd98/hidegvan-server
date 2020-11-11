@@ -1,5 +1,6 @@
 const low = require('lowdb'),
-  FileSync = require('lowdb/adapters/FileSync');
+  FileSync = require('lowdb/adapters/FileSync'),
+  fs = require('fs');
 
 const defaultDb = {
   apiConfig: {
@@ -21,6 +22,10 @@ const defaultDb = {
   ],
   rules: [],
 };
+
+if (!fs.existsSync('data')) {
+  fs.mkdirSync('data');
+}
 
 const db = low(new FileSync('data/db.json'));
 db.defaults(defaultDb).write();
