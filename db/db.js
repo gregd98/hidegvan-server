@@ -20,7 +20,20 @@ const defaultDb = {
       deviceId: '10005e6de6', name: 'Ketteske', measuring: true, initialized: true,
     },
   ],
-  rules: [],
+  rules: [
+    {
+      id: 'jnR0VId4c3zSMml2wsMCW',
+      name: 'rule1',
+      startTime: 190,
+      endTime: 371,
+      measuringDevice: '10005e6c69',
+      controlDevice: '10005e6c69',
+      minTemp: 19.9,
+      maxTemp: 19.9,
+      active: true,
+      started: false,
+    },
+  ],
 };
 
 if (!fs.existsSync('data')) {

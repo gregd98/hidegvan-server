@@ -30,8 +30,8 @@ const getDevice = (connection, deviceId) => new Promise((resolve, reject) => {
   });
 });
 
-const getTemperature = (connection, deviceId) => new Promise((resolve, reject) => {
-  connection.getDeviceCurrentTemperature(deviceId).then((result) => {
+const getCredentials = (connection) => new Promise((resolve, reject) => {
+  connection.getCredentials().then((result) => {
     resolve(result);
   }).catch((error) => {
     console.log(error.message);
@@ -39,8 +39,8 @@ const getTemperature = (connection, deviceId) => new Promise((resolve, reject) =
   });
 });
 
-const getCredentials = (connection) => new Promise((resolve, reject) => {
-  connection.getCredentials().then((result) => {
+const setPowerState = (connection, deviceId, state) => new Promise((resolve, reject) => {
+  connection.setDevicePowerState(deviceId, state ? 'on' : 'off', 1).then((result) => {
     resolve(result);
   }).catch((error) => {
     console.log(error.message);
@@ -65,12 +65,10 @@ class EwelinkAdapter {
     return withTimeout(getDevice(this.connection, deviceId), 5000);
   }
 
-  async getTemperature(deviceId) {
-    return withTimeout(getTemperature(this.connection, deviceId), 5000);
+  async setPowerState(deviceId, state) {
+    return withTimeout(setPowerState(this.connection, deviceId, state), 5000);
   }
 }
 
 const adapter = new EwelinkAdapter();
-// Object.freeze(adapter);
-
 module.exports = adapter;
