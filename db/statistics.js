@@ -3,7 +3,18 @@ const low = require('lowdb'),
   fs = require('fs');
 
 const defaultDb = {
-  devices: [],
+  devices: [
+    {
+      id: 'm2gRJOerFe2QFu0TVMC4z',
+      temperatures: [],
+      states: [],
+    },
+    {
+      id: 'SvjYQOMVZrs6kITXdpqPy',
+      temperatures: [],
+      states: [],
+    },
+  ],
 };
 
 if (!fs.existsSync('data')) {
