@@ -25,8 +25,8 @@ const getDevice = (connection, deviceId) => new Promise((resolve, reject) => {
   connection.getDevice(deviceId).then((result) => {
     resolve(result);
   }).catch((error) => {
-    console.log(error.message);
-    reject(new Error('Api error'));
+    console.log(`Error in getDevice: ${error.message}`);
+    reject(new Error('Api error.'));
   });
 });
 
@@ -34,8 +34,8 @@ const getCredentials = (connection) => new Promise((resolve, reject) => {
   connection.getCredentials().then((result) => {
     resolve(result);
   }).catch((error) => {
-    console.log(error.message);
-    reject(new Error('Api error'));
+    console.log(`Error in getCredentials: ${error.message}`);
+    reject(new Error('Api error.'));
   });
 });
 
@@ -43,8 +43,8 @@ const setPowerState = (connection, deviceId, state) => new Promise((resolve, rej
   connection.setDevicePowerState(deviceId, state ? 'on' : 'off', 1).then((result) => {
     resolve(result);
   }).catch((error) => {
-    console.log(error.message);
-    reject(new Error('Api error'));
+    console.log(`Error in setPowerState: ${error.message}`);
+    reject(new Error('Api error.'));
   });
 });
 
@@ -57,16 +57,16 @@ class EwelinkAdapter {
     this.connection = new Ewelink(credentials);
   }
 
-  async getCredentials() {
-    return withTimeout(getCredentials(this.connection), 5000);
+  async getCredentials(timeout = 5000) {
+    return withTimeout(getCredentials(this.connection), timeout);
   }
 
-  async getDevice(deviceId) {
-    return withTimeout(getDevice(this.connection, deviceId), 5000);
+  async getDevice(deviceId, timeout = 5000) {
+    return withTimeout(getDevice(this.connection, deviceId), timeout);
   }
 
-  async setPowerState(deviceId, state) {
-    return withTimeout(setPowerState(this.connection, deviceId, state), 5000);
+  async setPowerState(deviceId, state, timeout = 5000) {
+    return withTimeout(setPowerState(this.connection, deviceId, state), timeout);
   }
 }
 

@@ -23,6 +23,6 @@ rules:
   max-nested-callbacks: ["error", 4]
   max-params: ["error", 8]
   max-depth: ["error", 8]
-  max-lines-per-function: ["error", 80]
-  complexity: ["error", 16]
+  max-lines-per-function: ["error", 160]
+  complexity: ["error", 24]
   class-methods-use-this: 0

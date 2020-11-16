@@ -85,3 +85,4 @@ typings/
 data
 
 *.graphml
+*.txt
