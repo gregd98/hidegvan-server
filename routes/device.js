@@ -32,8 +32,8 @@ router.get('/:id', (req, res) => {
 router.put('/', bp.parseBody(), (req, res) => {
   const { name, deviceId, isMeasuring } = req.data;
   console.log(req.data);
-  if (!name || typeof name !== 'string'
-    || !deviceId || typeof deviceId !== 'string'
+  if (typeof name !== 'string'
+    || typeof deviceId !== 'string'
     || typeof isMeasuring !== 'boolean') {
     responses.badRequest(res);
   } else {
@@ -98,10 +98,8 @@ router.post('/', bp.parseBody(), (req, res) => {
   const {
     id, name, deviceId, isMeasuring,
   } = req.data;
-  if (!id || typeof id !== 'string'
-    || !name || typeof name !== 'string'
-    || !deviceId || typeof deviceId !== 'string'
-    || typeof isMeasuring !== 'boolean') {
+  if (typeof id !== 'string' || typeof name !== 'string'
+    || typeof deviceId !== 'string' || typeof isMeasuring !== 'boolean') {
     responses.badRequest(res);
   } else {
     const device = db.get('devices').find({ id }).value();
@@ -146,13 +144,15 @@ router.post('/', bp.parseBody(), (req, res) => {
                 if (!Number.isNaN(tmp) && tmp >= min && tmp <= max) {
                   newDevice.temperature = tmp;
                   newDevice.initialized = true;
+                } else {
+                  newDevice.initialized = false;
                 }
                 db.get('devices').find({ id }).assign(newDevice).write();
                 const statDevice = stat.get('devices').find({ id });
                 const date = (new Date()).toJSON();
-                statDevice.get('states').push({ date, active: state });
+                statDevice.get('states').push({ date, active: state }).write();
                 if (newDevice.initialized) {
-                  statDevice.get('temperatures').push({ date, temperature: tmp });
+                  statDevice.get('temperatures').push({ date, temperature: tmp }).write();
                 }
                 updateDeviceFrontend();
                 responses.succeed(res);

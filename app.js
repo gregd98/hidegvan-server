@@ -1,5 +1,6 @@
 const express = require('express'),
   http = require('http'),
+  path = require('path'),
   db = require('./db/db'),
   stat = require('./db/statistics'),
   ewelinkApi = require('./ewelink/ewelinkAdapter'),
@@ -14,22 +15,37 @@ const io = so.initialize(server);
 
 ewelinkApi.setConnection(db.get('apiConfig').value());
 
+const getRules = () => db.get('rules').value().map((rule) => {
+  const md = db.get('devices').find({ id: rule.measuringDevice }).value();
+  const cd = db.get('devices').find({ id: rule.controlDevice }).value();
+  return {
+    ...rule,
+    measuringDevice: {
+      id: rule.measuringDevice,
+      name: md ? md.name : '',
+    },
+    controlDevice: {
+      id: rule.controlDevice,
+      name: cd ? cd.name : '',
+    },
+  };
+});
+
 const repeatUntilSucceed = (f, iteration = 0) => {
   setTimeout(() => f(iteration), Math.min(iteration, 60) * 1000);
 };
 
 const evaluateRule = async (rule) => {
   const { fullControl } = db.get('appConfig').value();
-  const updateFrontend = () => io.to('frontend').emit('rule update', db.get('rules').value());
-  const switchDevice = (deviceId, state, ruleId, iteration) => {
-    const repeat = () => repeatUntilSucceed(
-      (i) => switchDevice(deviceId, state, ruleId, i), iteration + 1,
-    );
+  const updateFrontend = () => io.to('frontend').emit('rule update', getRules());
+  const setRuleActivated = (state) => db.get('rules').find({ id: rule.id }).assign({ activated: state }).write();
+  const switchDevice = (deviceId, state, iteration) => {
+    const repeat = () => repeatUntilSucceed((i) => switchDevice(deviceId, state, i), iteration + 1);
     ewelinkApi.setPowerState(deviceId, state).then((result) => {
       if (result.error) {
         repeat();
       } else {
-        db.get('rules').find({ id: ruleId }).assign({ activated: state }).write();
+        setRuleActivated(state);
         updateFrontend();
       }
     }).catch((error) => {
@@ -38,8 +54,8 @@ const evaluateRule = async (rule) => {
     });
   };
 
-  const switchFunc = (deviceId, ruleId, state) => {
-    repeatUntilSucceed((iteration) => switchDevice(deviceId, state, ruleId, iteration));
+  const switchFunc = (deviceId, state) => {
+    repeatUntilSucceed((iteration) => switchDevice(deviceId, state, iteration));
     console.log(`${state ? 'Start' : 'Stop'} device: ${deviceId}.`);
   };
 
@@ -47,42 +63,54 @@ const evaluateRule = async (rule) => {
     const measuringDevice = db.get('devices').find({ id: rule.measuringDevice }).value();
     const controlDevice = db.get('devices').find({ id: rule.controlDevice }).value();
     if (measuringDevice && measuringDevice.temperature !== undefined && controlDevice) {
-      if (time.checkInterval(rule.startTime, rule.endTime)) {
+      if (time.checkInterval([rule.startTime, rule.endTime])) {
         console.log('Inside the interval');
         if (rule.activated) {
           if (measuringDevice.temperature > rule.maxTemp) {
             if (controlDevice.active) {
-              switchFunc(controlDevice.deviceId, rule.id, false);
+              switchFunc(controlDevice.deviceId, false);
             } else {
-              db.get('rules').find({ id: rule.id }).assign({ activated: false }).write();
+              setRuleActivated(false);
               updateFrontend();
             }
           } else if (fullControl && !controlDevice.active) {
-            switchFunc(controlDevice.deviceId, rule.id, true);
+            switchFunc(controlDevice.deviceId, true);
           }
         } else if (measuringDevice.temperature < rule.minTemp) {
           if (!controlDevice.active) {
-            switchFunc(controlDevice.deviceId, rule.id, true);
+            switchFunc(controlDevice.deviceId, true);
           } else {
-            db.get('rules').find({ id: rule.id }).assign({ activated: true }).write();
+            setRuleActivated(true);
             updateFrontend();
           }
         } else if (fullControl && controlDevice.active) {
-          switchFunc(controlDevice.deviceId, rule.id, false);
+          switchFunc(controlDevice.deviceId, false);
         }
       } else {
         console.log('Outside of the interval');
         if (rule.activated) {
-          // mindenkeppen inaktiv
           if (controlDevice.active) {
-            // TODO ha egyeb rule nem kell bekapcsolva tartsa
-            switchFunc(controlDevice.deviceId, rule.id, false);
+            const nextRule = db.get('rules').filter({ controlDevice: controlDevice.id, enabled: true }).value()
+              .find((item) => {
+                if (item.id !== rule.id) {
+                  console.log(`Possible next: ${item}`);
+                  const md = db.get('devices').find({ id: item.measuringDevice }).value();
+                  return md && md.temperature !== undefined
+                    && time.checkInterval([item.startTime, item.endTime])
+                    && md.temperature < item.minTemp;
+                }
+                return false;
+              });
+            if (nextRule) {
+              setRuleActivated(false);
+              updateFrontend();
+            } else {
+              switchFunc(controlDevice.deviceId, false);
+            }
+          } else {
+            setRuleActivated(false);
+            updateFrontend();
           }
-        }
-
-        if (controlDevice.active) {
-          // TODO itt majd checkolni kell a tobbi ruleos szitut
-          switchFunc(controlDevice.deviceId, rule.id, false);
         }
       }
     }
@@ -91,22 +119,32 @@ const evaluateRule = async (rule) => {
   }
 };
 
+const evaluateRulesByMeasuringDevice = (measuringDevice) => db.get('rules').filter({ measuringDevice }).value().forEach((rule) => evaluateRule(rule));
+const evaluateRulesByControlDevice = (controlDevice) => db.get('rules').filter({ controlDevice }).value().forEach((rule) => evaluateRule(rule));
+
 const initializeDevices = async () => {
+  const updateFrontend = () => io.to('frontend').emit('device update', db.get('devices').value());
   const f = (device, iteration) => {
+    console.log(`Device in iter: ${iteration}`);
+    console.log(device);
     const { id, deviceId, initialized } = device;
     const dbDevice = db.get('devices').find({ id });
-    const repeat = () => repeatUntilSucceed((i) => f(deviceId, i), iteration + 1);
+    const repeat = () => repeatUntilSucceed((i) => f(device, i), iteration + 1);
     const assignTemp = (temperature) => {
       dbDevice.assign({ temperature, initialized: true }).write();
       stat.get('devices').find({ id }).get('temperatures')
         .push({ date: (new Date()).toJSON(), temperature })
         .write();
+      updateFrontend();
+      evaluateRulesByMeasuringDevice(id);
     };
     const assignState = (state) => {
       dbDevice.assign({ active: state }).write();
       stat.get('devices').find({ id }).get('states')
         .push({ date: (new Date()).toJSON(), active: state })
         .write();
+      updateFrontend();
+      evaluateRulesByControlDevice(id);
     };
     ewelinkApi.getDevice(deviceId).then((result) => {
       if (result.error) {
@@ -158,10 +196,9 @@ const initializeSocket = async () => {
               console.log(`Device ${data.deviceid}: ${data.params.currentTemperature}`);
               const deviceId = data.deviceid;
               const dbDevice = db.get('devices').find({ deviceId });
-              const { initialized } = dbDevice.value();
+              const { id, initialized } = dbDevice.value();
               const tmp = parseFloat(data.params.currentTemperature);
               const lastTmp = dbDevice.value().temperature;
-              const { id } = db.get('devices').find({ deviceId }).value();
               const writeStat = () => stat.get('devices').find({ id }).get('temperatures').push({
                 date: (new Date()).toJSON(),
                 temperature: tmp,
@@ -172,7 +209,7 @@ const initializeSocket = async () => {
                   dbDevice.assign({ temperature: tmp }).write();
                   writeStat();
                   updateFrontend();
-                  db.get('rules').filter({ measuringDevice: deviceId }).value().forEach((rule) => evaluateRule(rule));
+                  evaluateRulesByMeasuringDevice(id);
                 }
               } else {
                 const { min, max } = db.get('temperatureLimits').value();
@@ -180,7 +217,7 @@ const initializeSocket = async () => {
                   dbDevice.assign({ temperature: tmp, initialized: true }).write();
                   writeStat();
                   updateFrontend();
-                  db.get('rules').filter({ measuringDevice: deviceId }).value().forEach((rule) => evaluateRule(rule));
+                  evaluateRulesByMeasuringDevice(id);
                 }
               }
             }
@@ -191,12 +228,12 @@ const initializeSocket = async () => {
               const lastActive = dbDevice.value().active;
               if (lastActive === undefined || lastActive !== active) {
                 dbDevice.assign({ active }).write();
-                const { id } = db.get('devices').find({ deviceId }).value();
+                const { id } = dbDevice.value();
                 stat.get('devices').find({ id }).get('states')
                   .push({ date: (new Date()).toJSON(), active })
                   .write();
                 updateFrontend();
-                db.get('rules').filter({ controlDevice: id }).value().forEach((rule) => evaluateRule(rule));
+                evaluateRulesByControlDevice(id);
               }
               console.log(`Device ${data.deviceid} turned ${data.params.switch} (${data.sequence})`);
             }
@@ -225,12 +262,21 @@ const initializeSocket = async () => {
 const initializeRules = async () => {
   const evaluateRules = () => db.get('rules').filter({ enabled: true }).value()
     .forEach((rule) => evaluateRule(rule));
-  evaluateRules();
-  setInterval(evaluateRules, 10000);
+  // evaluateRules();
+  let currentTime = time.getCurrentTime();
+  setInterval(() => {
+    const tmp = time.getCurrentTime();
+    if (tmp !== currentTime) {
+      currentTime = tmp;
+      evaluateRules();
+    }
+  }, 1000);
 };
 
-const k = db.get('devices').find({ name: 'Egyeskee' }).value();
-console.log(k);
+io.on('connection', (socket) => {
+  console.log('Client connected.');
+  socket.join('frontend');
+});
 
 ewelinkApi.getCredentials().then((result) => {
   if (result.error) {
@@ -244,11 +290,11 @@ ewelinkApi.getCredentials().then((result) => {
   console.log(`Error: ${error.message}`);
 });
 
+app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api', apiRouter);
 
-io.on('connection', (socket) => {
-  console.log('Client connected.');
-  socket.join('frontend');
+app.get('/*', (req, res) => {
+  res.status(200).sendFile(path.join(__dirname, './public', 'index.html'));
 });
 
 server.listen(PORT, () => console.log(`Server listening on port ${PORT}`));

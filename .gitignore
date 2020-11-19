@@ -83,6 +83,7 @@ typings/
 .idea/
 
 data
+public
 
 *.graphml
 *.txt
