@@ -4,6 +4,7 @@ const express = require('express'),
   db = require('../db/db'),
   stat = require('../db/statistics'),
   bp = require('../middleware/bodyParser'),
+  ids = require('../middleware/idValidator'),
   responses = require('../utils/responses'),
   rules = require('../constraints/deviceConstraints'),
   ewelinkApi = require('../ewelink/ewelinkAdapter'),
@@ -19,13 +20,20 @@ router.get('/', (req, res) => {
   responses.rest(res, db.get('devices').value());
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', ids.validateDeviceId(), (req, res) => {
+  responses.rest(res, db.get('devices').find({ id: req.params.id }).value());
+});
+
+router.delete('/:id', ids.validateDeviceId(), (req, res) => {
   const { id } = req.params;
-  if (id.trim().length > 0) {
-    const device = db.get('devices').find({ id }).value();
-    (device ? () => responses.rest(res, device) : () => responses.notFound(res))();
+  const deps = db.get('rules').value().filter((rule) => rule.measuringDevice === id || rule.controlDevice === id);
+  if (deps.length > 0) {
+    responses.customError(res, 403, `Failed to delete device, because 
+    it's used by the following rules: ${deps.map((rule) => rule.name).join(', ')}.`);
   } else {
-    responses.badRequest(res);
+    db.get('devices').remove({ id }).write();
+    updateDeviceFrontend();
+    responses.succeed(res);
   }
 });
 

@@ -5,6 +5,7 @@ const express = require('express'),
   rules = require('../constraints/ruleConstraints'),
   responses = require('../utils/responses'),
   bp = require('../middleware/bodyParser'),
+  ids = require('../middleware/idValidator'),
   time = require('../utils/time'),
   so = require('../utils/socketing');
 
@@ -36,14 +37,16 @@ router.get('/', (req, res) => {
   responses.rest(res, getRules());
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', ids.validateRuleId(), (req, res) => {
+  responses.rest(res, db.get('rules').find({ id: req.params.id }).value());
+});
+
+router.delete('/:id', ids.validateRuleId(), (req, res) => {
   const { id } = req.params;
-  if (id.trim().length > 0) {
-    const rule = db.get('rules').find({ id }).value();
-    (rule ? () => responses.rest(res, rule) : () => responses.notFound(res))();
-  } else {
-    responses.badRequest(res);
-  }
+  // TODO itt majd kitalani, hogy mi legyen a deviceal
+  db.get('rules').remove({ id }).write();
+  updateRuleFrontend();
+  responses.succeed(res);
 });
 
 router.put('/', bp.parseBody(), (req, res) => {

@@ -1,7 +1,4 @@
-const badRequest = (req, res) => {
-  console.log(`Invalid request body: ${req.body}`);
-  res.status(400).json({ succeed: false, message: 'Bad request.' });
-};
+const responses = require('../utils/responses');
 
 exports.parseBody = () => (req, res, next) => {
   try {
@@ -10,10 +7,12 @@ exports.parseBody = () => (req, res, next) => {
       req.data = data;
       next();
     } else {
-      badRequest(req, res);
+      console.log(`Invalid request body: ${req.body}`);
+      responses.badRequest(res);
     }
   } catch (error) {
-    badRequest(req, res);
+    console.log(`Invalid request body: ${req.body}`);
+    responses.badRequest(res);
   }
 };
 
