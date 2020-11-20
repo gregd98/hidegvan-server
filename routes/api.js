@@ -1,7 +1,7 @@
 const express = require('express'),
   cors = require('cors'),
-  deviceRoutes = require('./device'),
-  ruleRoutes = require('./rule');
+  deviceRoutes = require('./devices'),
+  ruleRoutes = require('./rules');
 
 const reactDevCors = {
   origin: 'http://localhost:3000',

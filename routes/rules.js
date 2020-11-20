@@ -2,39 +2,24 @@ const express = require('express'),
   validate = require('validate.js'),
   nanoid = require('nanoid'),
   db = require('../db/db'),
-  rules = require('../constraints/ruleConstraints'),
+  ruleConstraints = require('../constraints/ruleConstraints'),
   responses = require('../utils/responses'),
   bp = require('../middleware/bodyParser'),
   ids = require('../middleware/idValidator'),
   time = require('../utils/time'),
-  so = require('../utils/socketing');
+  so = require('../utils/socketing'),
+  rules = require('../logic/rules');
 
 const router = express.Router({ mergeParams: true });
 
-const getRules = () => db.get('rules').value().map((rule) => {
-  const md = db.get('devices').find({ id: rule.measuringDevice }).value();
-  const cd = db.get('devices').find({ id: rule.controlDevice }).value();
-  return {
-    ...rule,
-    measuringDevice: {
-      id: rule.measuringDevice,
-      name: md ? md.name : '',
-    },
-    controlDevice: {
-      id: rule.controlDevice,
-      name: cd ? cd.name : '',
-    },
-  };
-});
-
 const updateRuleFrontend = () => {
-  so.getIo().to('frontend').emit('rule update', getRules());
+  so.getIo().to('frontend').emit('rule update', rules.getRules());
 };
 
 validate.validators.selector = (value) => (value ? undefined : 'This field is required.');
 
 router.get('/', (req, res) => {
-  responses.rest(res, getRules());
+  responses.rest(res, rules.getRules());
 });
 
 router.get('/:id', ids.validateRuleId(), (req, res) => {
@@ -43,10 +28,34 @@ router.get('/:id', ids.validateRuleId(), (req, res) => {
 
 router.delete('/:id', ids.validateRuleId(), (req, res) => {
   const { id } = req.params;
-  // TODO itt majd kitalani, hogy mi legyen a deviceal
   db.get('rules').remove({ id }).write();
   updateRuleFrontend();
   responses.succeed(res);
+});
+
+router.post('/:id/switch-state', ids.validateRuleId(), bp.parseBody(), (req, res) => {
+  console.log('switch time');
+  const { id } = req.params;
+  const { state } = req.data;
+  if (typeof state === 'boolean') {
+    const dbRule = db.get('rules').find({ id });
+    if (dbRule.value().enabled !== state) {
+      const newState = { enabled: state };
+      if (!state) {
+        newState.activated = false;
+        dbRule.assign(newState).write();
+      } else {
+        dbRule.assign(newState).write();
+        rules.evaluateRule(dbRule.value());
+      }
+      updateRuleFrontend();
+      responses.succeed(res);
+    } else {
+      responses.succeed(res);
+    }
+  } else {
+    responses.badRequest(res);
+  }
 });
 
 router.put('/', bp.parseBody(), (req, res) => {
@@ -60,7 +69,7 @@ router.put('/', bp.parseBody(), (req, res) => {
     || typeof measuringDevice !== 'string' || typeof controlDevice !== 'string') {
     responses.badRequest(res);
   } else {
-    let validation = validate(req.data, rules.ruleConstraints, { fullMessages: false });
+    let validation = validate(req.data, ruleConstraints.ruleConstraints, { fullMessages: false });
     if (validation) {
       responses.inputErrors(res, validation);
     } else {
@@ -122,7 +131,7 @@ router.post('/', bp.parseBody(), (req, res) => {
     if (!rule) {
       responses.notFound(res);
     } else {
-      let validation = validate(req.data, rules.ruleConstraints, { fullMessages: false });
+      let validation = validate(req.data, ruleConstraints.ruleConstraints, { fullMessages: false });
       if (validation) {
         responses.inputErrors(res, validation);
       } else {

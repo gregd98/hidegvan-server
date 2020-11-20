@@ -16,6 +16,34 @@ const updateDeviceFrontend = () => {
   so.getIo().to('frontend').emit('device update', db.get('devices').value());
 };
 
+const switchDevice = (deviceId, state) => new Promise((resolve, reject) => {
+  const rejectDelay = (reason) =>  new Promise((resolve2, reject2) => {
+    setTimeout(reject2.bind(null, reason), 500);
+  });
+  const attempt = () => new Promise((resolve2, reject2) => {
+    ewelinkApi.setPowerState(deviceId, state).then((result) => {
+      if (result.error) {
+        reject2(new Error(result.error.msg));
+      } else {
+        resolve2();
+      }
+    }).catch((error) => {
+      console.log(error.message);
+      reject2(new Error('API error.'));
+    });
+  });
+
+  let p = Promise.reject();
+  for (let i = 0; i < 5; i += 1) {
+    p = p.catch(attempt).catch(rejectDelay);
+  }
+  p.then((result) => {
+    resolve(result);
+  }).catch((error) => {
+    reject(error);
+  });
+});
+
 router.get('/', (req, res) => {
   responses.rest(res, db.get('devices').value());
 });
@@ -34,6 +62,25 @@ router.delete('/:id', ids.validateDeviceId(), (req, res) => {
     db.get('devices').remove({ id }).write();
     updateDeviceFrontend();
     responses.succeed(res);
+  }
+});
+
+router.post('/:id/switch-state', ids.validateDeviceId(), bp.parseBody(), (req, res) => {
+  const { id } = req.params;
+  const { state } = req.data;
+  if (typeof state === 'boolean') {
+    const dbDevice = db.get('devices').find({ id });
+    if (dbDevice.value().active !== state) {
+      switchDevice(dbDevice.value().deviceId, state).then(() => {
+        responses.succeed(res);
+      }).catch((error) => {
+        responses.customError(res, 500, error.message);
+      });
+    } else {
+      responses.succeed(res);
+    }
+  } else {
+    responses.badRequest(res);
   }
 });
 
