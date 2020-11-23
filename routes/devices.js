@@ -8,9 +8,11 @@ const express = require('express'),
   responses = require('../utils/responses'),
   rules = require('../constraints/deviceConstraints'),
   ewelinkApi = require('../ewelink/ewelinkAdapter'),
-  so = require('../utils/socketing');
+  so = require('../utils/socketing'),
+  auth = require('../middleware/auth');
 
 const router = express.Router({ mergeParams: true });
+router.use(auth.authorize());
 
 const updateDeviceFrontend = () => {
   so.getIo().to('frontend').emit('device update', db.get('devices').value());

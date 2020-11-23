@@ -5,6 +5,7 @@ const low = require('lowdb'),
 const defaultDb = {
   appConfig: {
     fullControl: false,
+    sessionMaxAge: 21600000,
   },
   apiConfig: {
     email: 'andras.demeny@gmail.com',
@@ -15,6 +16,8 @@ const defaultDb = {
     min: 1,
     max: 100,
   },
+  users: [],
+  sessions: [],
   devices: [
     {
       id: 'm2gRJOerFe2QFu0TVMC4z',
@@ -29,32 +32,7 @@ const defaultDb = {
       measuring: true,
     },
   ],
-  rules: [
-    {
-      id: 'jnR0VId4c3zSMml2wsMCW',
-      name: 'teszt',
-      startTime: 0,
-      endTime: 4,
-      measuringDevice: 'SvjYQOMVZrs6kITXdpqPy',
-      controlDevice: 'm2gRJOerFe2QFu0TVMC4z',
-      minTemp: 60,
-      maxTemp: 62,
-      enabled: true,
-      activated: false,
-    },
-    {
-      id: '9eJ885hCWZmQ2lh5ingvr',
-      name: 'Beszarok',
-      startTime: 4,
-      endTime: 1320,
-      measuringDevice: 'SvjYQOMVZrs6kITXdpqPy',
-      controlDevice: 'm2gRJOerFe2QFu0TVMC4z',
-      minTemp: 60,
-      maxTemp: 62,
-      enabled: true,
-      activated: false,
-    },
-  ],
+  rules: [],
 };
 
 if (!fs.existsSync('data')) {

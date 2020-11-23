@@ -1,4 +1,4 @@
-const errorBody = (message) => ({ succeed: false, message });
+const errorBody = (message, authenticated = true) => ({ succeed: false, authenticated, message });
 
 exports.succeed = (res) => res.status(200).json({ succeed: true });
 exports.badRequest = (res) => res.status(400).json(errorBody('Bad request.'));

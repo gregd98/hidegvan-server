@@ -8,9 +8,11 @@ const express = require('express'),
   ids = require('../middleware/idValidator'),
   time = require('../utils/time'),
   so = require('../utils/socketing'),
-  rules = require('../logic/rules');
+  rules = require('../logic/rules'),
+  auth = require('../middleware/auth');
 
 const router = express.Router({ mergeParams: true });
+router.use(auth.authorize());
 
 const updateRuleFrontend = () => {
   so.getIo().to('frontend').emit('rule update', rules.getRules());

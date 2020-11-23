@@ -1,4 +1,5 @@
 const express = require('express'),
+  session = require('express-session'),
   http = require('http'),
   path = require('path'),
   db = require('./db/db'),
@@ -160,15 +161,26 @@ const initializeSocket = async () => {
   await openSocket();
 };
 
+const deleteExpiredSessions = () => {
+  console.log('Deleting expired sessions.');
+  const ct = (new Date()).getTime();
+  db.get('sessions').value()
+    .filter((item) => ct - (new Date(item.created)).getTime() > db.get('appConfig').value().sessionMaxAge)
+    .map((item) => item.sessionId)
+    .forEach((sessionId) => db.get('sessions').remove({ sessionId }).write());
+};
+
 const initializeRules = async () => {
   const evaluateRules = () => db.get('rules').filter({ enabled: true }).value()
     .forEach((rule) => rules.evaluateRule(rule));
-  // evaluateRules();
   let currentTime = time.getCurrentTime();
   setInterval(() => {
     const tmp = time.getCurrentTime();
     if (tmp !== currentTime) {
       currentTime = tmp;
+      if (currentTime === 1074) {
+        deleteExpiredSessions();
+      }
       evaluateRules();
     }
   }, 1000);
@@ -190,6 +202,13 @@ ewelinkApi.getCredentials().then((result) => {
 }).catch((error) => {
   console.log(`Error: ${error.message}`);
 });
+
+app.use(session({
+  secret: 'super secret',
+  cookie: { maxAge: 43200000 },
+  resave: false,
+  saveUninitialized: true,
+}));
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api', apiRouter);
