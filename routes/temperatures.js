@@ -5,7 +5,7 @@ const express = require('express'),
   responses = require('../utils/responses');
 
 const router = express.Router({ mergeParams: true });
-// router.use(auth.authorize());
+router.use(auth.authorize());
 
 router.get('/', (req, res) => {
   const { lastTime, firstDate, lastDate } = req.query;
