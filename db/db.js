@@ -39,7 +39,10 @@ if (!fs.existsSync('data')) {
   fs.mkdirSync('data');
 }
 
-const db = low(new FileSync('data/db.json'));
+const db = low(new FileSync('data/db.json', {
+  serialize: (obj) => JSON.stringify(obj),
+  deserialize: (data) => JSON.parse(data),
+}));
 db.defaults(defaultDb).write();
 
 module.exports = db;

@@ -4,8 +4,10 @@ const express = require('express'),
   nanoid = require('nanoid'),
   deviceRoutes = require('./devices'),
   ruleRoutes = require('./rules'),
+  tempRoutes = require('./temperatures'),
   bp = require('../middleware/bodyParser'),
   db = require('../db/db'),
+  stat = require('../db/statistics'),
   pwd = require('../utils/passwordUtils'),
   responses = require('../utils/responses'),
   rules = require('../constraints/signupConstraints'),
@@ -74,15 +76,23 @@ router.put('/signup', bp.parseBody(), (req, res) => {
 });
 
 router.get('/logged-in', (req, res) => {
-  const payload = {
+  responses.rest(res, {
     loggedIn: auth.checkSessionId(req.sessionID),
     haveUsers: db.get('users').value().length > 0,
-  };
-  console.log(`Send data: ${payload}`);
-  responses.rest(res, payload);
+  });
+});
+
+router.get('/stat', (req, res) => {
+  const data = stat.get('devices').find({ id: 'SvjYQOMVZrs6kITXdpqPy' }).value().temperatures;
+  const cd = (new Date()).getTime();
+  const valami = data.filter((item) => cd - item[0] <= 15 * 1000);
+  responses.rest(res, valami);
 });
 
 router.use('/devices', deviceRoutes);
 router.use('/rules', ruleRoutes);
+router.use('/temperatures', tempRoutes);
 
 module.exports = router;
+
+// TODO last n hour/day/week/month/

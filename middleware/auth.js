@@ -22,3 +22,5 @@ exports.authorize = () => (req, res, next) => {
 };
 
 exports.checkSessionId = (sessionId) => checkSessionId(sessionId);
+
+exports.sleep = (ms) => (req, res, next) => new Promise(() => setTimeout(next, ms));

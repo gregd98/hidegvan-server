@@ -131,13 +131,13 @@ router.put('/', bp.parseBody(), (req, res) => {
               newDevice.initialized = true;
             }
             db.get('devices').push(newDevice).write();
-            const date = (new Date()).toJSON();
+            const date = (new Date()).getTime();
             stat.get('devices')
               .push({
                 id: newDevice.id,
                 temperatures: newDevice.initialized
-                  ? [{ date, temperature: tmp }] : [],
-                states: [{ date, active: state }],
+                  ? [[date, tmp]] : [],
+                states: [[date, state]],
               }).write();
 
             updateDeviceFrontend();
@@ -206,10 +206,10 @@ router.post('/', bp.parseBody(), (req, res) => {
                 }
                 db.get('devices').find({ id }).assign(newDevice).write();
                 const statDevice = stat.get('devices').find({ id });
-                const date = (new Date()).toJSON();
-                statDevice.get('states').push({ date, active: state }).write();
+                const date = (new Date()).getTime();
+                statDevice.get('states').push([date, state]).write();
                 if (newDevice.initialized) {
-                  statDevice.get('temperatures').push({ date, temperature: tmp }).write();
+                  statDevice.get('temperatures').push([date, tmp]).write();
                 }
                 updateDeviceFrontend();
                 responses.succeed(res);

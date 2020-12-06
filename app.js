@@ -24,6 +24,15 @@ const repeatUntilSucceed = (f, iteration = 0) => {
 const evaluateRulesByMeasuringDevice = (measuringDevice) => db.get('rules').filter({ measuringDevice }).value().forEach((rule) => rules.evaluateRule(rule));
 const evaluateRulesByControlDevice = (controlDevice) => db.get('rules').filter({ controlDevice }).value().forEach((rule) => rules.evaluateRule(rule));
 
+const insertStatGap = (id) => {
+  const dbTemp = stat.get('devices').find({ id }).get('temperatures');
+  const len = dbTemp.value().length;
+  if (len > 0 && (dbTemp.value())[len - 1][1] !== null) {
+    dbTemp.push([Math.floor(((new Date()).getTime() + (dbTemp.value())[len - 1][0]) / 2), null])
+      .write();
+  }
+};
+
 const initializeDevices = async () => {
   const updateFrontend = () => io.to('frontend').emit('device update', db.get('devices').value());
   const f = (device, iteration) => {
@@ -34,8 +43,10 @@ const initializeDevices = async () => {
     const repeat = () => repeatUntilSucceed((i) => f(device, i), iteration + 1);
     const assignTemp = (temperature) => {
       dbDevice.assign({ temperature, initialized: true }).write();
+      insertStatGap(id);
       stat.get('devices').find({ id }).get('temperatures')
-        .push({ date: (new Date()).toJSON(), temperature })
+        // .push({ date: (new Date()).toJSON(), temperature })
+        .push([(new Date()).getTime(), temperature])
         .write();
       updateFrontend();
       evaluateRulesByMeasuringDevice(id);
@@ -43,7 +54,8 @@ const initializeDevices = async () => {
     const assignState = (state) => {
       dbDevice.assign({ active: state }).write();
       stat.get('devices').find({ id }).get('states')
-        .push({ date: (new Date()).toJSON(), active: state })
+        // .push({ date: (new Date()).toJSON(), active: state })
+        .push([(new Date()).getTime(), state])
         .write();
       updateFrontend();
       evaluateRulesByControlDevice(id);
@@ -101,24 +113,26 @@ const initializeSocket = async () => {
               const { id, initialized } = dbDevice.value();
               const tmp = parseFloat(data.params.currentTemperature);
               const lastTmp = dbDevice.value().temperature;
-              const writeStat = () => stat.get('devices').find({ id }).get('temperatures').push({
-                date: (new Date()).toJSON(),
-                temperature: tmp,
-              })
+              const currentTime = (new Date()).getTime();
+              const writeStat = () => stat.get('devices').find({ id }).get('temperatures')
+                .push([currentTime, tmp])
                 .write();
               if (initialized) {
                 if (!Number.isNaN(tmp) && tmp !== lastTmp && Math.abs(tmp - lastTmp) <= 10) {
                   dbDevice.assign({ temperature: tmp }).write();
                   writeStat();
                   updateFrontend();
+                  io.to('frontend').emit('temperature update', { deviceId: id, temperature: [currentTime, tmp] });
                   evaluateRulesByMeasuringDevice(id);
                 }
               } else {
                 const { min, max } = db.get('temperatureLimits').value();
                 if (!Number.isNaN(tmp) && tmp >= min && tmp <= max) {
                   dbDevice.assign({ temperature: tmp, initialized: true }).write();
+                  insertStatGap(id);
                   writeStat();
                   updateFrontend();
+                  io.to('frontend').emit('temperature update', { deviceId: id, temperature: [currentTime, tmp] });
                   evaluateRulesByMeasuringDevice(id);
                 }
               }
@@ -132,7 +146,7 @@ const initializeSocket = async () => {
                 dbDevice.assign({ active }).write();
                 const { id } = dbDevice.value();
                 stat.get('devices').find({ id }).get('states')
-                  .push({ date: (new Date()).toJSON(), active })
+                  .push([(new Date()).getTime(), active])
                   .write();
                 updateFrontend();
                 evaluateRulesByControlDevice(id);
