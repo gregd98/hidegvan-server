@@ -142,9 +142,6 @@ router.post('/', bp.parseBody(), (req, res) => {
         if (otherRules.find((item) => item.name === name)) {
           validation.name = ['This name is already in use.'];
         }
-        if (startTime === endTime) {
-          validation.endTime = ['Start time and end time must be different.'];
-        }
         const md = db.get('devices').find({ id: measuringDevice }).value();
         const cd = db.get('devices').find({ id: controlDevice }).value();
         if (!md || !md.measuring) {

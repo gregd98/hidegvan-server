@@ -8,7 +8,7 @@ exports.internalServerError = (res) => res.status(500).json(errorBody('Internal 
 exports.customError = (res, status, message) => res.status(status).json(errorBody(message));
 
 exports.inputErrors = (res, errors) => res.status(200).json(
-  { succeed: false, inputErrors: errors },
+  { succeed: false, authenticated: true, inputErrors: errors },
 );
 
 exports.rest = (res, payload) => res.status(200).json({ succeed: true, payload });
