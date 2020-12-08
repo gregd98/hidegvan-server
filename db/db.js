@@ -3,19 +3,8 @@ const low = require('lowdb'),
   fs = require('fs');
 
 const defaultDb = {
-  appConfig: {
-    fullControl: false,
-    sessionMaxAge: 21600000,
-  },
-  apiConfig: {
-    email: 'andras.demeny@gmail.com',
-    password: 'Kicsikutya',
-    region: 'eu',
-  },
-  temperatureLimits: {
-    min: 1,
-    max: 100,
-  },
+  appConfig: {},
+  apiConfig: {},
   users: [],
   sessions: [],
   devices: [

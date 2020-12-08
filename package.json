@@ -2,13 +2,26 @@
   "name": "hidegvan-server",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "app.js",
+  "bin": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "pkg": {
+    "scripts": [],
+    "assets": [
+      "public/**/*"
+    ],
+    "targets": [
+      "node12-linux-x64",
+      "node12-win-x64",
+      "node12-macos-x64"
+    ]
   },
   "author": "Demény Gergely",
   "license": "MIT",
   "dependencies": {
+    "config": "^3.3.3",
     "cors": "^2.8.5",
     "ewelink-api": "^3.1.1",
     "express": "^4.17.1",
@@ -17,6 +30,7 @@
     "lowdb": "^1.0.0",
     "moment": "^2.29.1",
     "nanoid": "^3.1.16",
+    "pkg": "^4.4.9",
     "socket.io": "^2.3.0",
     "validate.js": "^0.13.1"
   },

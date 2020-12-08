@@ -7,11 +7,9 @@ exports.parseBody = () => (req, res, next) => {
       req.data = data;
       next();
     } else {
-      console.log(`Invalid request body: ${req.body}`);
       responses.badRequest(res);
     }
   } catch (error) {
-    console.log(`Invalid request body: ${req.body}`);
     responses.badRequest(res);
   }
 };

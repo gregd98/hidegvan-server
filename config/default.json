@@ -1,0 +1,16 @@
+{
+  "apiConfig": {
+    "email": "andras.demeny@gmail.com",
+    "password": "Kicsikutya",
+    "region": "eu"
+  },
+  "appConfig": {
+    "port": 80,
+    "fullControl": false,
+    "sessionMaxAge": 21600000,
+    "temperatureLimits": {
+      "min": 1,
+      "max": 100
+    }
+  }
+}

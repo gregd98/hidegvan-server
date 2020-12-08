@@ -2,6 +2,7 @@ const express = require('express'),
   session = require('express-session'),
   http = require('http'),
   path = require('path'),
+  config = require('config'),
   db = require('./db/db'),
   stat = require('./db/statistics'),
   ewelinkApi = require('./ewelink/ewelinkAdapter'),
@@ -10,12 +11,9 @@ const express = require('express'),
   so = require('./utils/socketing'),
   rules = require('./logic/rules');
 
-const PORT = 80;
 const app = express();
 const server = http.createServer(app);
 const io = so.initialize(server);
-
-ewelinkApi.setConnection(db.get('apiConfig').value());
 
 const repeatUntilSucceed = (f, iteration = 0) => {
   setTimeout(() => f(iteration), Math.min(iteration, 60) * 1000);
@@ -36,8 +34,6 @@ const insertStatGap = (id) => {
 const initializeDevices = async () => {
   const updateFrontend = () => io.to('frontend').emit('device update', db.get('devices').value());
   const f = (device, iteration) => {
-    console.log(`Device in iter: ${iteration}`);
-    console.log(device);
     const { id, deviceId, initialized } = device;
     const dbDevice = db.get('devices').find({ id });
     const repeat = () => repeatUntilSucceed((i) => f(device, i), iteration + 1);
@@ -54,7 +50,6 @@ const initializeDevices = async () => {
     const assignState = (state) => {
       dbDevice.assign({ active: state }).write();
       stat.get('devices').find({ id }).get('states')
-        // .push({ date: (new Date()).toJSON(), active: state })
         .push([(new Date()).getTime(), state])
         .write();
       updateFrontend();
@@ -69,7 +64,7 @@ const initializeDevices = async () => {
       } else {
         const tmp = parseFloat(result.params.currentTemperature);
         assignState(result.params.switch === 'on');
-        const { min, max } = db.get('temperatureLimits').value();
+        const { min, max } = db.get('appConfig').value().temperatureLimits;
         if (!Number.isNaN(tmp) && tmp >= min && tmp <= max) {
           assignTemp(tmp);
         }
@@ -93,21 +88,18 @@ const initializeSocket = async () => {
   const openSocket = async () => {
     try {
       socket = await ewelinkApi.connection.openWebSocket((result) => {
-        // console.log(result);
         let data = result;
         if (data !== 'pong' && !(data.error !== undefined && data.error === 0)) {
           const updateFrontend = () => io.to('frontend').emit('device update', db.get('devices').value());
           if (!data.params) {
             try {
               data = JSON.parse(result);
-              console.log('Retard data');
             } catch (error) {
               console.log(`Socket json parse error: ${error.message}`);
             }
           }
           if (data.deviceid && db.get('devices').find({ deviceId: data.deviceid }).value()) {
             if (data.params.currentTemperature) {
-              console.log(`Device ${data.deviceid}: ${data.params.currentTemperature}`);
               const deviceId = data.deviceid;
               const dbDevice = db.get('devices').find({ deviceId });
               const { id, initialized } = dbDevice.value();
@@ -118,7 +110,7 @@ const initializeSocket = async () => {
                 .push([currentTime, tmp])
                 .write();
               if (initialized) {
-                if (!Number.isNaN(tmp) && tmp !== lastTmp && Math.abs(tmp - lastTmp) <= 10) {
+                if (!Number.isNaN(tmp) && tmp !== lastTmp && Math.abs(tmp - lastTmp) <= 5) {
                   dbDevice.assign({ temperature: tmp }).write();
                   writeStat();
                   updateFrontend();
@@ -126,7 +118,7 @@ const initializeSocket = async () => {
                   evaluateRulesByMeasuringDevice(id);
                 }
               } else {
-                const { min, max } = db.get('temperatureLimits').value();
+                const { min, max } = db.get('appConfig').value().temperatureLimits;
                 if (!Number.isNaN(tmp) && tmp >= min && tmp <= max) {
                   dbDevice.assign({ temperature: tmp, initialized: true }).write();
                   insertStatGap(id);
@@ -151,7 +143,6 @@ const initializeSocket = async () => {
                 updateFrontend();
                 evaluateRulesByControlDevice(id);
               }
-              console.log(`Device ${data.deviceid} turned ${data.params.switch} (${data.sequence})`);
             }
           }
         }
@@ -200,21 +191,32 @@ const initializeRules = async () => {
   }, 1000);
 };
 
-io.on('connection', (socket) => {
-  console.log('Client connected.');
-  socket.join('frontend');
-});
-
-ewelinkApi.getCredentials().then((result) => {
-  if (result.error) {
-    console.log(result.msg);
+const readConfig = () => {
+  if (config.has('apiConfig')) {
+    const apiConfig = config.get('apiConfig');
+    if (apiConfig.email && apiConfig.password && apiConfig.region) {
+      db.set('apiConfig', apiConfig).write();
+    } else {
+      return false;
+    }
   } else {
-    initializeDevices();
-    initializeSocket();
-    initializeRules();
+    return false;
   }
-}).catch((error) => {
-  console.log(`Error: ${error.message}`);
+  if (config.has('appConfig')) {
+    const appConfig = config.get('appConfig');
+    if (appConfig.port && appConfig.fullControl !== undefined && appConfig.sessionMaxAge) {
+      db.set('appConfig', appConfig).write();
+    } else {
+      return false;
+    }
+  } else {
+    return false;
+  }
+  return true;
+};
+
+io.on('connection', (socket) => {
+  socket.join('frontend');
 });
 
 app.use(session({
@@ -231,4 +233,31 @@ app.get('/*', (req, res) => {
   res.status(200).sendFile(path.join(__dirname, './public', 'index.html'));
 });
 
-server.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+const pressAnyKeyToExit = () => {
+  console.log('Press any key to exit...');
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+  process.stdin.on('data', process.exit.bind(process, 0));
+};
+
+if (readConfig()) {
+  ewelinkApi.setConnection(db.get('apiConfig').value());
+  ewelinkApi.getCredentials().then((result) => {
+    if (result.error) {
+      console.log(`Error: ${result.msg}`);
+      pressAnyKeyToExit();
+    } else {
+      initializeDevices();
+      initializeSocket();
+      initializeRules();
+      const { port } = db.get('appConfig').value();
+      server.listen(port, () => console.log(`Server running on port ${port}`));
+    }
+  }).catch((error) => {
+    pressAnyKeyToExit();
+    console.log(`Error: ${error.message}`);
+  });
+} else {
+  console.log('Error: Invalid config file.');
+  pressAnyKeyToExit();
+}

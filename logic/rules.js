@@ -47,7 +47,6 @@ exports.evaluateRule = async (rule) => {
 
   const switchFunc = (deviceId, state) => {
     repeatUntilSucceed((iteration) => switchDevice(deviceId, state, iteration));
-    console.log(`${state ? 'Start' : 'Stop'} device: ${deviceId}.`);
   };
 
   try {
@@ -56,7 +55,6 @@ exports.evaluateRule = async (rule) => {
       const controlDevice = db.get('devices').find({ id: rule.controlDevice }).value();
       if (measuringDevice && measuringDevice.temperature !== undefined && controlDevice) {
         if (time.checkInterval([rule.startTime, rule.endTime])) {
-          console.log('Inside the interval');
           if (rule.activated) {
             if (measuringDevice.temperature > rule.maxTemp) {
               if (controlDevice.active) {
@@ -79,13 +77,11 @@ exports.evaluateRule = async (rule) => {
             switchFunc(controlDevice.deviceId, false);
           }
         } else {
-          console.log('Outside of the interval');
           if (rule.activated) {
             if (controlDevice.active) {
               const nextRule = db.get('rules').filter({ controlDevice: controlDevice.id, enabled: true }).value()
                 .find((item) => {
                   if (item.id !== rule.id) {
-                    console.log(`Possible next: ${item}`);
                     const md = db.get('devices').find({ id: item.measuringDevice }).value();
                     return md && md.temperature !== undefined
                       && time.checkInterval([item.startTime, item.endTime])

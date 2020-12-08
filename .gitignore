@@ -88,3 +88,10 @@ public
 
 *.graphml
 *.txt
+
+*linux
+*macos
+*win.exe
+
+builder.js
+tester.js

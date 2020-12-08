@@ -15,18 +15,17 @@ const defaultDb = {
       states: [],
     },
   ],
-  devices2: [],
 };
 
 if (!fs.existsSync('data')) {
   fs.mkdirSync('data');
 }
 
-// const db = low(new FileSync('data/statistics.json', {
-//   serialize: (obj) => JSON.stringify(obj),
-//   deserialize: (data) => JSON.parse(data),
-// }));
-const db = low(new FileSync('data/statistics.json'));
+const db = low(new FileSync('data/statistics.json', {
+  serialize: (obj) => JSON.stringify(obj),
+  deserialize: (data) => JSON.parse(data),
+}));
+// const db = low(new FileSync('data/statistics.json'));
 db.defaults(defaultDb).write();
 
 module.exports = db;

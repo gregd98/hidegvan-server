@@ -30,7 +30,7 @@ const switchDevice = (deviceId, state) => new Promise((resolve, reject) => {
         resolve2();
       }
     }).catch((error) => {
-      console.log(error.message);
+      console.log(`Error: ${error.message}`);
       reject2(new Error('API error.'));
     });
   });
@@ -88,7 +88,6 @@ router.post('/:id/switch-state', ids.validateDeviceId(), bp.parseBody(), (req, r
 
 router.put('/', bp.parseBody(), (req, res) => {
   const { name, deviceId, isMeasuring } = req.data;
-  console.log(req.data);
   if (typeof name !== 'string'
     || typeof deviceId !== 'string'
     || typeof isMeasuring !== 'boolean') {
@@ -125,7 +124,7 @@ router.put('/', bp.parseBody(), (req, res) => {
               active: state,
             };
             const tmp = parseFloat(result.params.currentTemperature);
-            const { min, max } = db.get('temperatureLimits').value();
+            const { min, max } = db.get('appConfig').value().temperatureLimits;
             if (!Number.isNaN(tmp) && tmp >= min && tmp <= max) {
               newDevice.temperature = tmp;
               newDevice.initialized = true;
@@ -197,7 +196,7 @@ router.post('/', bp.parseBody(), (req, res) => {
                 const state = result.params.switch === 'on';
                 newDevice.active = state;
                 const tmp = parseFloat(result.params.currentTemperature);
-                const { min, max } = db.get('temperatureLimits').value();
+                const { min, max } = db.get('appConfig').value().temperatureLimits;
                 if (!Number.isNaN(tmp) && tmp >= min && tmp <= max) {
                   newDevice.temperature = tmp;
                   newDevice.initialized = true;

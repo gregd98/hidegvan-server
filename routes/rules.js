@@ -36,7 +36,6 @@ router.delete('/:id', ids.validateRuleId(), (req, res) => {
 });
 
 router.post('/:id/switch-state', ids.validateRuleId(), bp.parseBody(), (req, res) => {
-  console.log('switch time');
   const { id } = req.params;
   const { state } = req.data;
   if (typeof state === 'boolean') {
@@ -61,7 +60,6 @@ router.post('/:id/switch-state', ids.validateRuleId(), bp.parseBody(), (req, res
 });
 
 router.put('/', bp.parseBody(), (req, res) => {
-  console.log(req.data);
   const {
     name, startTime, endTime, minTemp, maxTemp, measuringDevice, controlDevice,
   } = req.data;

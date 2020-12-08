@@ -25,7 +25,7 @@ const getDevice = (connection, deviceId) => new Promise((resolve, reject) => {
   connection.getDevice(deviceId).then((result) => {
     resolve(result);
   }).catch((error) => {
-    console.log(`Error in getDevice: ${error.message}`);
+    console.log(`Error: ${error.message}`);
     reject(new Error('Api error.'));
   });
 });
@@ -34,7 +34,7 @@ const getCredentials = (connection) => new Promise((resolve, reject) => {
   connection.getCredentials().then((result) => {
     resolve(result);
   }).catch((error) => {
-    console.log(`Error in getCredentials: ${error.message}`);
+    console.log(`Error: ${error.message}`);
     reject(new Error('Api error.'));
   });
 });
@@ -43,7 +43,7 @@ const setPowerState = (connection, deviceId, state) => new Promise((resolve, rej
   connection.setDevicePowerState(deviceId, state ? 'on' : 'off', 1).then((result) => {
     resolve(result);
   }).catch((error) => {
-    console.log(`Error in setPowerState: ${error.message}`);
+    console.log(`Error: ${error.message}`);
     reject(new Error('Api error.'));
   });
 });
