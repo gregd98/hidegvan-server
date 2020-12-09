@@ -1,6 +1,6 @@
 {
   "name": "hidegvan-server",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "app.js",
   "bin": "app.js",
@@ -32,7 +32,9 @@
     "nanoid": "^3.1.16",
     "pkg": "^4.4.9",
     "socket.io": "^2.3.0",
-    "validate.js": "^0.13.1"
+    "validate.js": "^0.13.1",
+    "websocket": "^1.0.33",
+    "websocket-as-promised": "^1.1.0"
   },
   "devDependencies": {
     "eslint": "^7.13.0",

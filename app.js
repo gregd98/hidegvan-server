@@ -9,7 +9,8 @@ const express = require('express'),
   time = require('./utils/time'),
   apiRouter = require('./routes/api'),
   so = require('./utils/socketing'),
-  rules = require('./logic/rules');
+  rules = require('./logic/rules'),
+  ewelinkSocket = require('./ewelink/ewelinkSocket');
 
 const app = express();
 const server = http.createServer(app);
@@ -41,7 +42,6 @@ const initializeDevices = async () => {
       dbDevice.assign({ temperature, initialized: true }).write();
       insertStatGap(id);
       stat.get('devices').find({ id }).get('temperatures')
-        // .push({ date: (new Date()).toJSON(), temperature })
         .push([(new Date()).getTime(), temperature])
         .write();
       updateFrontend();
@@ -87,17 +87,13 @@ const initializeSocket = async () => {
   let socket;
   const openSocket = async () => {
     try {
-      socket = await ewelinkApi.connection.openWebSocket((result) => {
-        let data = result;
-        if (data !== 'pong' && !(data.error !== undefined && data.error === 0)) {
+      socket = await ewelinkSocket.openWebSocket(ewelinkApi.connection, (data) => {
+      // socket = await ewelinkApi.getConnection().openWebSocket((result) => {
+        if (data.action && data.action === 'socket') {
+          console.log(data.message);
+        }
+        if (!(data.error !== undefined && data.error === 0)) {
           const updateFrontend = () => io.to('frontend').emit('device update', db.get('devices').value());
-          if (!data.params) {
-            try {
-              data = JSON.parse(result);
-            } catch (error) {
-              console.log(`Socket json parse error: ${error.message}`);
-            }
-          }
           if (data.deviceid && db.get('devices').find({ deviceId: data.deviceid }).value()) {
             if (data.params.currentTemperature) {
               const deviceId = data.deviceid;
@@ -251,7 +247,7 @@ if (readConfig()) {
       initializeSocket();
       initializeRules();
       const { port } = db.get('appConfig').value();
-      server.listen(port, () => console.log(`Server running on port ${port}`));
+      server.listen(port, () => console.log(`Server running on port ${port}.`));
     }
   }).catch((error) => {
     pressAnyKeyToExit();
@@ -261,3 +257,7 @@ if (readConfig()) {
   console.log('Error: Invalid config file.');
   pressAnyKeyToExit();
 }
+
+// TODO checkoljuk deletenel a statokat
+// TODO jelezni dashboardon, ha leesett a kapcsolat, esetleg ujrasettelni
+// TODO signupon mas titlet allitani
