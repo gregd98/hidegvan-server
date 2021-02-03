@@ -8,18 +8,18 @@ const defaultDb = {
   users: [],
   sessions: [],
   devices: [
-    {
-      id: 'm2gRJOerFe2QFu0TVMC4z',
-      deviceId: '10005e6c69',
-      name: 'Hőmérő',
-      measuring: true,
-    },
-    {
-      id: 'SvjYQOMVZrs6kITXdpqPy',
-      deviceId: '10005e6de6',
-      name: 'Hőpompa',
-      measuring: true,
-    },
+    // {
+    //   id: 'm2gRJOerFe2QFu0TVMC4z',
+    //   deviceId: '10005e6c69',
+    //   name: 'Hőmérő',
+    //   measuring: true,
+    // },
+    // {
+    //   id: 'SvjYQOMVZrs6kITXdpqPy',
+    //   deviceId: '10005e6de6',
+    //   name: 'Hőpompa',
+    //   measuring: true,
+    // },
   ],
   rules: [],
 };

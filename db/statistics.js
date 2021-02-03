@@ -4,16 +4,16 @@ const low = require('lowdb'),
 
 const defaultDb = {
   devices: [
-    {
-      id: 'm2gRJOerFe2QFu0TVMC4z',
-      temperatures: [],
-      states: [],
-    },
-    {
-      id: 'SvjYQOMVZrs6kITXdpqPy',
-      temperatures: [],
-      states: [],
-    },
+    // {
+    //   id: 'm2gRJOerFe2QFu0TVMC4z',
+    //   temperatures: [],
+    //   states: [],
+    // },
+    // {
+    //   id: 'SvjYQOMVZrs6kITXdpqPy',
+    //   temperatures: [],
+    //   states: [],
+    // },
   ],
 };
 
