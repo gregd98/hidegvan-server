@@ -1,8 +1,8 @@
 {
   "apiConfig": {
-    "email": "andras.demeny@gmail.com",
-    "password": "Kicsikutya",
-    "region": "eu"
+    "email": "[your email]",
+    "password": "[your password]",
+    "region": "[your region]"
   },
   "appConfig": {
     "port": 80,
