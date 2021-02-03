@@ -93,5 +93,4 @@ build
 *macos
 *win.exe
 
-builder.js
 tester.js
