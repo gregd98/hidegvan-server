@@ -84,7 +84,6 @@ typings/
 
 data
 data_old
-public
 build
 
 *.graphml
