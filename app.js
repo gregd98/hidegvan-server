@@ -89,9 +89,9 @@ const initializeSocket = async () => {
     try {
       socket = await ewelinkSocket.openWebSocket(ewelinkApi.connection, (data) => {
       // socket = await ewelinkApi.getConnection().openWebSocket((result) => {
-        if (data.action && data.action === 'socket') {
-          console.log(data.message);
-        }
+      // if (data.action && data.action === 'socket') {
+      //   console.log(data.message);
+      // }
         if (!(data.error !== undefined && data.error === 0)) {
           const updateFrontend = () => io.to('frontend').emit('device update', db.get('devices').value());
           if (data.deviceid && db.get('devices').find({ deviceId: data.deviceid }).value()) {
